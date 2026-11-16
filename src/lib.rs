@@ -109,8 +109,7 @@ use {
         },
         mem::{
             ManuallyDrop,
-            MaybeUninit,
-            forget
+            MaybeUninit
         },
         ops::{
             Range,
@@ -192,15 +191,20 @@ impl<Item, const INLINE: usize> SmallVec<Item, INLINE, Global> {
         // as best as it could be. (Checked with <godbolt.org>)
         let mut buf: [MaybeUninit<Item>; INLINE] = [const { MaybeUninit::uninit() }; INLINE];
 
-        // SAFETY: buf and elements do not overlap, are aligned and have space
-        // for at least S elements since S <= INLINE.
-        // We will drop the elements only once since we do forget(elements).
-        unsafe {
-            copy_nonoverlapping(elements.as_ptr(), buf.as_mut_ptr() as *mut Item, S);
-        }
+        // The elements are moved into `buf` and will be dropped by SmallVec.
+        let elements = ManuallyDrop::new(elements);
 
-        // `elements` have been moved into buf and will be dropped by SmallVec
-        forget(elements);
+        // SAFETY: `S <= INLINE` (asserted above), so `buf` has room for one
+        // `[Item; S]`, with the same alignment as `Item`. `buf` and `elements`
+        // are distinct locals, so they do not overlap. `elements` is wrapped
+        // in `ManuallyDrop`, so the array is dropped exactly once, by SmallVec.
+        unsafe {
+            copy_nonoverlapping(
+                &raw const elements,
+                buf.as_mut_ptr().cast::<ManuallyDrop<[Item; S]>>(),
+                1
+            );
+        }
 
         // SAFETY: all the members in 0..S are initialized
         Self {
@@ -1075,10 +1079,10 @@ impl<Item, const INLINE: usize, Heap: Allocator> SmallVec<Item, INLINE, Heap> {
         }
 
         // We are leaving the critical section and no panic happened,
-        // Commit the length change and forget the guard.
+        // Commit the length change and defuse the guard.
         // SAFETY: `write` is always less than or equal to original_len.
         unsafe { g.v.set_len(g.write) };
-        forget(g);
+        _ = ManuallyDrop::new(g);
     }
 
     #[inline]
@@ -1475,7 +1479,7 @@ impl<Item, const INLINE: usize> SmallVec<Item, INLINE, Global> {
                     pointer.add(i).write(elem.clone());
                     guard.length += 1;
                 }
-                forget(guard);
+                _ = ManuallyDrop::new(guard);
                 pointer.add(n - 1).write(elem);
             }
         }
@@ -1523,7 +1527,7 @@ impl<Item, const INLINE: usize> SmallVec<Item, INLINE, Global> {
                 destination.add(i).write(val);
                 guard.length += 1;
             }
-            forget(guard);
+            _ = ManuallyDrop::new(guard);
         }
 
         // SAFETY: The elements were initialized in the loop above.
@@ -1589,7 +1593,7 @@ impl<Item, const INLINE: usize, Heap: Allocator> SmallVec<Item, INLINE, Heap> {
                 destination.add(i).write(val);
                 guard.length += 1;
             }
-            forget(guard);
+            _ = ManuallyDrop::new(guard);
         }
 
         // SAFETY: The elements were initialized in the loop above.
