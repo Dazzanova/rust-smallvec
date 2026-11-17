@@ -128,6 +128,7 @@ impl<Item, const INLINE: usize> RawSmallVec<Item, INLINE> {
     /// Item must not be a ZST.
     ///
     /// the allocator must be the same one the data was allocated with
+    #[inline]
     pub unsafe fn try_grow_raw<Heap: Allocator>(
         &mut self,
         length: LocatedLength<Item>,
@@ -192,5 +193,6 @@ impl<Item, const INLINE: usize> RawSmallVec<Item, INLINE> {
 }
 
 impl<Item, const INLINE: usize> Default for RawSmallVec<Item, INLINE> {
+    #[inline(always)]
     fn default() -> Self { Self::new() }
 }

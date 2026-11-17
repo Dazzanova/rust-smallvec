@@ -47,6 +47,7 @@ where
     Archived<Item>: RkyvDeserialize<Item, D>,
     D: Fallible + ?Sized
 {
+    #[inline]
     fn deserialize(
         &self,
         deserializer: &mut D

@@ -36,14 +36,17 @@ impl<Iterable: Iterator, const INLINE: usize, Heap: Allocator> Iterator
 {
     type Item = Iterable::Item;
 
+    #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> { self.drain.next() }
 
+    #[inline(always)]
     fn size_hint(&self) -> (usize, Option<usize>) { self.drain.size_hint() }
 }
 
 impl<Iterable: Iterator, const INLINE: usize, Heap: Allocator> DoubleEndedIterator
     for Splice<'_, Iterable, INLINE, Heap>
 {
+    #[inline(always)]
     fn next_back(&mut self) -> Option<Self::Item> { self.drain.next_back() }
 }
 
@@ -55,6 +58,7 @@ impl<Iterable: Iterator, const INLINE: usize, Heap: Allocator> ExactSizeIterator
 impl<Iterable: Iterator, const INLINE: usize, Heap: Allocator> Drop
     for Splice<'_, Iterable, INLINE, Heap>
 {
+    #[inline]
     fn drop(&mut self) {
         self.drain.by_ref().for_each(drop);
         self.drain.iter = Iter::default();

@@ -28,7 +28,7 @@ pub struct LocatedLength<Item>(usize, PhantomData<Item>);
 // We don't use `#[derive(Clone, Copy)]` instead because `Item` doesn't need to
 // be `Copy` or `Clone`.
 impl<Item> Clone for LocatedLength<Item> {
-    #[inline]
+    #[inline(always)]
     fn clone(&self) -> Self { *self }
 }
 
